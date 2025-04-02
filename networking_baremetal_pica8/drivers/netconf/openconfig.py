@@ -394,12 +394,16 @@ class NetconfOpenConfigDriver(object):
 
     @staticmethod
     def network_mtu_changed(context):
-        if hasattr(context, 'network'):
-            n_new = context.network.current
-            n_old = context.network.original
+        """Safely checks if MTU has changed, even if context.network is missing."""
+        if hasattr(context, 'network') and context.network:
+            n_new = context.network.current or {}
+            n_old = context.network.original or {}
         else:
-            n_new = context.current
-            n_old = context.original
+            # Fallback to context.current/original if it's a direct PortContext
+            n_new = getattr(context, 'current', {}) or {}
+            n_old = getattr(context, 'original', {}) or {}
+
+        # If they are still empty or not dicts, treat as no change
         return n_new.get('mtu') != n_old.get('mtu')
 
     def _append_vni_config(self, net_instances, seg_id, remove=False):
